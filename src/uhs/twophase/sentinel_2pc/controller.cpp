@@ -50,6 +50,7 @@ namespace cbdc::sentinel_2pc {
                                          result_callback_type result_callback)
         -> bool {
         const auto validation_err = transaction::validation::check_tx(tx);
+
         if(validation_err.has_value()) {
             auto tx_id = transaction::tx_id(tx);
             m_logger->debug(
@@ -63,14 +64,13 @@ namespace cbdc::sentinel_2pc {
             return true;
         }
 
-        auto compact_tx = cbdc::transaction::compact_tx(tx);
-
-        m_logger->debug("Accepted", to_string(compact_tx.m_id));
-
         auto cb =
             [&, res_cb = std::move(result_callback)](std::optional<bool> res) {
                 result_handler(res, res_cb);
             };
+
+        auto compact_tx = cbdc::transaction::compact_tx(tx);
+        m_logger->debug("Accepted", to_string(compact_tx.m_id));
 
         // TODO: add a "retry" error response to offload sentinels from this
         //       infinite retry responsibility.
