@@ -8,14 +8,13 @@
 
 #include "server.hpp"
 #include "uhs/sentinel/interface.hpp"
+#include "uhs/transaction/transaction.hpp"
 #include "util/common/config.hpp"
 #include "util/network/connection_manager.hpp"
-#include "uhs/transaction/transaction.hpp"
-
-#include <secp256k1.h>
-#include <secp256k1_bulletproofs.h>
 
 #include <memory>
+#include <secp256k1.h>
+#include <secp256k1_bulletproofs.h>
 
 namespace cbdc::sentinel {
     /// Sentinel implementation.

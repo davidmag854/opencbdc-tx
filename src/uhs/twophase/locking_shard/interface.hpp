@@ -6,8 +6,8 @@
 #ifndef OPENCBDC_TX_SRC_LOCKING_SHARD_LOCKING_SHARD_INTERFACE_H_
 #define OPENCBDC_TX_SRC_LOCKING_SHARD_LOCKING_SHARD_INTERFACE_H_
 
-#include "util/common/hash.hpp"
 #include "uhs/transaction/transaction.hpp"
+#include "util/common/hash.hpp"
 
 #include <optional>
 #include <variant>
