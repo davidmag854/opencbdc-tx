@@ -10,6 +10,10 @@
 #include "uhs/sentinel/interface.hpp"
 #include "util/common/config.hpp"
 #include "util/network/connection_manager.hpp"
+#include "uhs/transaction/transaction.hpp"
+
+#include <secp256k1.h>
+#include <secp256k1_bulletproofs.h>
 
 #include <memory>
 
@@ -56,7 +60,7 @@ namespace cbdc::sentinel {
 
         std::unique_ptr<rpc::server> m_rpc_server;
 
-        void send_transaction(const transaction::full_tx& tx);
+        void send_transaction(const transaction::compact_tx& tx);
     };
 }
 

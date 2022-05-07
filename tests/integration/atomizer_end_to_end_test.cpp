@@ -137,7 +137,7 @@ TEST_F(atomizer_end_to_end_test, complete_transaction) {
     ASSERT_TRUE(res.has_value());
     ASSERT_FALSE(res->m_tx_error.has_value());
     ASSERT_EQ(res->m_tx_status, cbdc::sentinel::tx_status::pending);
-    ASSERT_EQ(tx->m_outputs[0].m_value, 33);
+    ASSERT_EQ(tx->m_out_spend_data.value()[0].m_value, 33);
     ASSERT_EQ(m_sender->balance(), 60);
     auto in = m_sender->export_send_inputs(tx.value(), addr);
     ASSERT_EQ(in.size(), 1);
@@ -175,7 +175,7 @@ TEST_F(atomizer_end_to_end_test, double_spend) {
     ASSERT_TRUE(res.has_value());
     ASSERT_FALSE(res->m_tx_error.has_value());
     ASSERT_EQ(res->m_tx_status, cbdc::sentinel::tx_status::pending);
-    ASSERT_EQ(tx->m_outputs[0].m_value, 33);
+    ASSERT_EQ(tx->m_out_spend_data.value()[0].m_value, 33);
     ASSERT_EQ(m_sender->balance(), 60);
 
     std::this_thread::sleep_for(m_block_wait_interval);
@@ -203,8 +203,8 @@ TEST_F(atomizer_end_to_end_test, double_spend) {
                                                   {
                                                       ctx.m_inputs[0],
                                                       ctx.m_inputs[1],
-                                                      ctx.m_uhs_outputs[0],
-                                                      ctx.m_uhs_outputs[1],
+                                                      ctx.m_outputs[0].m_id,
+                                                      ctx.m_outputs[1].m_id,
                                                   }}}});
 
     auto want = cbdc::watchtower::status_request_check_success{
@@ -220,11 +220,11 @@ TEST_F(atomizer_end_to_end_test, double_spend) {
            cbdc::watchtower::status_update_state{
                cbdc::watchtower::search_status::unspent,
                bbh,
-               ctx.m_uhs_outputs[0]},
+               ctx.m_outputs[0].m_id},
            cbdc::watchtower::status_update_state{
                cbdc::watchtower::search_status::unspent,
                bbh,
-               ctx.m_uhs_outputs[1]}}}}};
+               ctx.m_outputs[1].m_id}}}}};
     ASSERT_EQ(*wc_res, want);
 }
 
@@ -233,37 +233,38 @@ TEST_F(atomizer_end_to_end_test, invalid_transaction) {
     auto wc = cbdc::watchtower::blocking_client(
         m_opts.m_watchtower_client_endpoints[0]);
     ASSERT_TRUE(wc.init());
-    auto tx = m_sender->create_transaction(33, addr);
-    ASSERT_TRUE(tx.has_value());
+    auto maybe_tx = m_sender->create_transaction(33, addr);
+    ASSERT_TRUE(maybe_tx.has_value());
+    auto tx = maybe_tx.value();
 
-    tx.value().m_outputs[0].m_value = 1; // Unbalanced
+    tx.m_outputs.erase(tx.m_outputs.end() - 1);
 
-    m_sender->sign_transaction(tx.value());
-    auto res = m_sender->send_transaction(tx.value());
+    m_sender->sign_transaction(tx);
+    auto res = m_sender->send_transaction(tx);
     ASSERT_TRUE(res.has_value());
     ASSERT_TRUE(res->m_tx_error.has_value());
     ASSERT_EQ(res->m_tx_status, cbdc::sentinel::tx_status::static_invalid);
     ASSERT_TRUE(
-        std::holds_alternative<cbdc::transaction::validation::tx_error_code>(
+        std::holds_alternative<cbdc::transaction::validation::proof_error>(
             res->m_tx_error.value()));
 
-    auto tx_err = std::get<cbdc::transaction::validation::tx_error_code>(
+    auto tx_err = std::get<cbdc::transaction::validation::proof_error>(
         res->m_tx_error.value());
 
-    ASSERT_EQ(tx_err,
-              cbdc::transaction::validation::tx_error_code::asymmetric_values);
+    ASSERT_EQ(tx_err.m_code,
+              cbdc::transaction::validation::proof_error_code::wrong_sum);
 
     std::this_thread::sleep_for(m_block_wait_interval);
 
     auto bbh = wc.request_best_block_height()->height();
-    auto ctx = cbdc::transaction::compact_tx(tx.value());
+    auto ctx = cbdc::transaction::compact_tx(tx);
     auto wc_res = wc.request_status_update(
         cbdc::watchtower::status_update_request{{{ctx.m_id,
                                                   {
                                                       ctx.m_inputs[0],
                                                       ctx.m_inputs[1],
-                                                      ctx.m_uhs_outputs[0],
-                                                      ctx.m_uhs_outputs[1],
+                                                      ctx.m_outputs[0].m_id,
+                                                      ctx.m_outputs[1].m_id,
                                                   }}}});
 
     auto want = cbdc::watchtower::status_request_check_success{
@@ -279,11 +280,11 @@ TEST_F(atomizer_end_to_end_test, invalid_transaction) {
            cbdc::watchtower::status_update_state{
                cbdc::watchtower::search_status::no_history,
                bbh,
-               ctx.m_uhs_outputs[0]},
+               ctx.m_outputs[0].m_id},
            cbdc::watchtower::status_update_state{
                cbdc::watchtower::search_status::no_history,
                bbh,
-               ctx.m_uhs_outputs[1]}}}}};
+               ctx.m_outputs[1].m_id}}}}};
 
     ASSERT_EQ(*wc_res, want);
 }

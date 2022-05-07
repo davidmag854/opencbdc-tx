@@ -7,6 +7,7 @@
 #define OPENCBDC_TX_SRC_LOCKING_SHARD_LOCKING_SHARD_INTERFACE_H_
 
 #include "util/common/hash.hpp"
+#include "uhs/transaction/transaction.hpp"
 
 #include <optional>
 #include <variant>
@@ -20,7 +21,7 @@ namespace cbdc::locking_shard {
         /// Vector of input hashes for the shard to process as spent.
         std::vector<hash_t> m_spending{};
         /// Vector of output hashes to create on the shard.
-        std::vector<hash_t> m_creating{};
+        std::vector<transaction::compact_output> m_creating{};
 
         auto operator==(const tx& rhs) const -> bool;
     };

@@ -74,19 +74,17 @@ namespace cbdc::sentinel {
 
         if(!res.has_value()) {
             m_logger->debug("Accepted tx:", cbdc::to_string(tx_id));
+            // Only forward transactions that are valid
+            const transaction::compact_tx ctx(tx);
+            send_transaction(ctx);
         } else {
             m_logger->debug("Rejected tx:", cbdc::to_string(tx_id));
-        }
-
-        // Only forward transactions that are valid
-        if(!res.has_value()) {
-            send_transaction(tx);
         }
 
         return response{status, res};
     }
 
-    void controller::send_transaction(const transaction::full_tx& tx) {
+    void controller::send_transaction(const transaction::compact_tx& tx) {
         const auto compact_tx = cbdc::transaction::compact_tx(tx);
         auto ctx_pkt = std::make_shared<cbdc::buffer>();
         auto ctx_ser = cbdc::buffer_serializer(*ctx_pkt);

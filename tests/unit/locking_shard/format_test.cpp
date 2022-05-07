@@ -15,7 +15,8 @@ class locking_shard_format_test : public ::testing::Test {
 
     cbdc::locking_shard::tx m_tx{std::optional<cbdc::hash_t>({'a', 'b', 'c'}),
                                  {{'d', 'e', 'f'}, {'g', 'h', 'i'}},
-                                 {{'x', 'y', 'z'}, {'z', 'z', 'z'}}};
+                                 {{{'w'}, {'x'}, {'y'}, {'z'}},
+                                    {{'z'}, {'z'}, {'z'}, {'z'}}}};
 };
 
 TEST_F(locking_shard_format_test, tx) {
