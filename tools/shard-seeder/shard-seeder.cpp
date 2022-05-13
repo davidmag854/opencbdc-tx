@@ -117,7 +117,6 @@ auto main(int argc, char** argv) -> int {
                                      res.ToString());
                         return;
                     }
-
                     auto tx = wal.create_seeded_transaction(0).value();
                     auto batch_size = 0;
                     leveldb::WriteBatch batch;
@@ -132,9 +131,28 @@ auto main(int argc, char** argv) -> int {
                             std::memcpy(hash_arr.data(),
                                         output_hash.data(),
                                         sizeof(output_hash));
+                            std::array<char,
+                                       sizeof(ctx.m_outputs[0].m_auxiliary)
+                                           + sizeof(ctx.m_outputs[0].m_range)
+                                           + sizeof(ctx.m_outputs[0].m_consistency)>
+                                proofs_arr{};
+                            auto pptr = proofs_arr.data();
+                            std::memcpy(pptr, ctx.m_outputs[0].m_auxiliary.data(),
+                                        ctx.m_outputs[0].m_auxiliary.size());
+                            pptr += ctx.m_outputs[0].m_auxiliary.size();
+                            std::memcpy(pptr,
+                                        ctx.m_outputs[0].m_range.data(),
+                                        ctx.m_outputs[0].m_range.size());
+                            pptr += ctx.m_outputs[0].m_range.size();
+                            std::memcpy(pptr,
+                                        ctx.m_outputs[0].m_consistency.data(),
+                                        ctx.m_outputs[0].m_consistency.size());
                             leveldb::Slice hash_key(hash_arr.data(),
                                                     output_hash.size());
-                            batch.Put(hash_key, leveldb::Slice());
+                            leveldb::Slice ProofVal(proofs_arr.data(),
+                                                    proofs_arr.size());
+
+                            batch.Put(hash_key, ProofVal);
                             batch_size++;
                             if(batch_size >= write_batch_size) {
                                 db->Write(wopt, &batch);
@@ -158,11 +176,12 @@ auto main(int argc, char** argv) -> int {
                     for(size_t tx_idx = 0; tx_idx != num_utxos; tx_idx++) {
                         tx.m_inputs[0].m_prevout.m_index = tx_idx;
                         cbdc::transaction::compact_tx ctx(tx);
-                        const cbdc::hash_t& output_hash
-                            = ctx.m_outputs[0].m_id;
-                        if(output_hash[0] >= shard_start
-                           && output_hash[0] <= shard_end) {
-                            ser << output_hash;
+                        const auto& compact_out
+                            = ctx.m_outputs[0];
+                        if(compact_out.m_id[0] >= shard_start
+                           && compact_out.m_id[0] <= shard_end) {
+                            ser << compact_out.m_id;
+                            ser << compact_out;
                             count++;
                         }
                     }
